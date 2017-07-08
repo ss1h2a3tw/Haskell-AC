@@ -48,6 +48,7 @@ hitfailTrie xs t
 
 data AC = AC {
   isroot :: Bool
+, str :: String
 , failAC :: AC
 , hitfailAC :: AC
 , hit :: Bool
@@ -55,7 +56,7 @@ data AC = AC {
 } | ANull deriving (Show,Eq)
 
 
-realbuildAC cs root =  AC (cs==[]) (realbuildAC (failTrie cs root) root) (realbuildAC (hitfailTrie cs root) root) isHit buildsub where
+realbuildAC cs root =  AC (cs==[]) cs (realbuildAC (failTrie cs root) root) (realbuildAC (hitfailTrie cs root) root) isHit buildsub where
     (Trie isHit ts) = fromJust $ getnodeTrie cs root
     buildsub = [sel x|x<-[0..127]]
     sel x
