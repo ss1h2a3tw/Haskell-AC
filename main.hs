@@ -1,50 +1,72 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GADTs #-}
+
 import Data.Char
 import Data.Maybe
-data Trie = Trie Bool [Trie] | TNull deriving (Show,Eq)
+import qualified Data.Text as T
+import qualified Data.Array as A
 
-singleTrie [] = Trie True [TNull | x <- [0..127]]
-singleTrie (c:cs) = Trie False [ sel x | x<-[0..127] ] where
-    sel x
-        | x == (ord c) = singleTrie cs
-        | otherwise = TNull
+data TNode = TNode Bool (A.Array Char Trie)
+  deriving (Show, Eq)
+type Trie = Maybe TNode
 
-mergeTrie TNull x = x
-mergeTrie x TNull = x
-mergeTrie (Trie isA as) (Trie isB bs) = Trie (isA || isB) $ zipWith mergeTrie as bs
+singleTrie :: String -> Trie
+singleTrie [] = Just . TNode True . A.array (minBound::Char,maxBound::Char) $ [ (x,Nothing) | x <- [minBound::Char .. maxBound::Char] ]
+singleTrie (c:cs) = Just . TNode False . A.array (minBound::Char,maxBound::Char) $ [ (x,sel x) | x <- [minBound::Char .. maxBound::Char] ]
+  where
+  sel x
+    | x == c = singleTrie cs
+    | otherwise = Nothing
 
-constructTrie [] = Trie False [ TNull | x<-[0..127] ]
+mergeTrie :: Trie -> Trie -> Trie
+mergeTrie Nothing x = x
+mergeTrie x Nothing = x
+mergeTrie (Just (TNode isA as)) (Just (TNode isB bs)) =
+  Just . TNode (isA || isB) . A.array (minBound::Char,maxBound::Char)
+  $ [ (x,(mergeTrie (as A.! x) (bs A.! x))) | x <- [minBound::Char .. maxBound::Char] ]
+
+constructTrie :: [String] -> Trie
+constructTrie [] = Just . TNode False . A.array (minBound::Char,maxBound::Char) $ [ (x,Nothing) | x <- [minBound::Char .. maxBound::Char] ]
 constructTrie (x:xs) = mergeTrie (constructTrie xs) (singleTrie x)
 
-getnodeTrie _ TNull = Nothing
+getnodeTrie :: String -> Trie -> Maybe Trie
+getnodeTrie _ Nothing = Nothing
 getnodeTrie [] t = Just t
-getnodeTrie (c:cs) (Trie _ ts) = getnodeTrie cs $ ts!!(ord c)
+getnodeTrie (c:cs) (Just (TNode _ ts)) = getnodeTrie cs $ ts A.! c
 
-inTrie cs t = isHit where
-    isHit
-        | Nothing == getnodeTrie cs t = False
-        | otherwise =  (\(Trie x _)->x) $ fromJust $ getnodeTrie cs t
+inTrie :: String -> Trie -> Bool
+inTrie cs t = isHit
+  where
+  isHit
+    | isNothing (getnodeTrie cs t) = False
+    | otherwise =  (\(Just (TNode x _))->x) $ fromJust $ getnodeTrie cs t
 
-jumpTrie [] c (Trie _ ts)
-    | ts!!(ord c) == TNull = []
-    | otherwise = [c]
+jumpTrie :: String -> Char -> Trie -> String
+jumpTrie [] c (Just (TNode _ ts))
+  | ts A.! c == Nothing = []
+  | otherwise = [c]
 jumpTrie cs c t
-    | ts!!(ord c) /= TNull = cs++[c]
-    | otherwise = jumpTrie (failTrie cs t) c t
-    where (Trie _ ts) = fromJust $ getnodeTrie cs t
+  | ts A.! c /= Nothing = cs++[c]
+  | otherwise = jumpTrie (failTrie cs t) c t
+    where
+    (Just (TNode _ ts)) = fromJust $ getnodeTrie cs t
 
+failTrie :: String -> Trie -> String
 failTrie [] _ = []
-failTrie (x:[]) _ = []
-failTrie xs t = jumpTrie pre (last xs) t where
-    pre = failTrie (init xs) t
+failTrie [x] _ = []
+failTrie xs t = jumpTrie pre (last xs) t
+  where
+  pre = failTrie (init xs) t
 
+hitfailTrie :: String -> Trie -> String
 hitfailTrie [] _ = []
-hitfailTrie (x:[]) _ = []
+hitfailTrie [x] _ = []
 hitfailTrie xs t
-    | isHit = res
-    | otherwise = failTrie res t where
-        res = failTrie xs t
-        Trie isHit _ = fromJust $ getnodeTrie res t
-
+  | isHit = res
+  | otherwise = failTrie res t
+    where
+    res = failTrie xs t
+    (Just (TNode isHit _)) = fromJust $ getnodeTrie res t
 
 data AC = AC {
   isroot :: Bool
@@ -52,19 +74,23 @@ data AC = AC {
 , failAC :: AC
 , hitfailAC :: AC
 , hit :: Bool
-, sub :: [AC]
+, sub :: A.Array Char AC
 } | ANull deriving (Show,Eq)
 
+realbuildAC :: String -> Trie -> AC
+realbuildAC cs root = AC (null cs) cs (realbuildAC (failTrie cs root) root) (realbuildAC (hitfailTrie cs root) root) isHit buildsub
+  where
+  (Just (TNode isHit ts)) = fromJust $ getnodeTrie cs root
+  buildsub = A.array (minBound::Char,maxBound::Char) $ [ (x,sel x) | x <- [minBound::Char .. maxBound::Char] ]
+  sel x
+    | ts A.! x == Nothing = ANull
+    | otherwise = realbuildAC (cs++[x]) root
 
-realbuildAC cs root =  AC (cs==[]) cs (realbuildAC (failTrie cs root) root) (realbuildAC (hitfailTrie cs root) root) isHit buildsub where
-    (Trie isHit ts) = fromJust $ getnodeTrie cs root
-    buildsub = [sel x|x<-[0..127]]
-    sel x
-        | ts!!x == TNull = ANull
-        | otherwise = realbuildAC (cs++[chr x]) root
-
+buildAC :: [String] -> AC
 buildAC ss = realbuildAC [] $ constructTrie ss
 
+runAC :: AC -> Char -> AC
 runAC a c
-    | (sub a)!!(ord c) == ANull = if (isroot a) then a else (runAC (failAC a) c)
-    | otherwise = (sub a)!!(ord c)
+  | sub a A.! c == ANull = if isroot a then a else runAC (failAC a) c
+  | otherwise = sub a A.! c
+
