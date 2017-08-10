@@ -22,10 +22,7 @@ addChild idx c hit =
       M.insert c len cm
 
 getIdx :: String -> State Trie (Maybe Int)
-getIdx s =
-  do
-    t <- get
-    return $ f t
+getIdx s = gets f
   where
     f (Trie m _) = run m 0 s
     run m idx [] = Just idx
@@ -37,11 +34,7 @@ getIdx s =
           TrieNode _ _ cm = m M.! idx
 
 isHit :: String -> State Trie Bool
-isHit s =
-  do
-    t <- get
-    r <- getIdx s
-    return $ isJust r
+isHit s = liftM isJust (getIdx s)
 
 nullTrie = Trie (M.singleton 0 (TrieNode False Nothing M.empty)) 1
 
