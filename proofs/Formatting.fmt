@@ -5,7 +5,7 @@
 \ReadOnlyOnce{Formatting.fmt}%
 \makeatletter
 
-\let\Varid\mathsf
+\let\Varid\mathit
 \let\Conid\mathsf
 %%subst keyword a        = "\keyw{" a "}"
 %%subst numeral a        = "\con{" a "}"
@@ -28,6 +28,8 @@
 \newcommand\Hide{\mathbin{\downarrow}}
 \newcommand\Reveal{\mathbin{\uparrow}}
 
+%format Set a = "\{" a "\}"
+%format set x = "\{" a "\}"
 %format <=> = "\mathrel{\equiv}"
 %format <== = "\mathrel{\Leftarrow}"
 %format ==> = "\mathrel{\Rightarrow}"
@@ -39,6 +41,8 @@
 %format elem x xs = x "\mathbin{\in}" xs
 %format `snoc` = "\mathbin{\triangleleft}"
 %format `union` = "\mathbin{\cup}"
+%format ps = P
+%format qs = Q
 
 \def\commentbegin{\quad\{\ }
 \def\commentend{\}}
