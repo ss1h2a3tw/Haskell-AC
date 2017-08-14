@@ -1,0 +1,8 @@
+
+*.aux
+
+*.log
+
+proofs/Proofs\.pdf
+
+*.ptb
