@@ -33,8 +33,25 @@ getIdx s = gets f
         where
           TrieNode _ _ cm = m M.! idx
 
+getNode :: Int -> State Trie (Maybe TrieNode)
+getNode idx = gets f
+  where
+    f (Trie m _) = M.lookup idx m
+
+isExist :: String -> State Trie Bool
+isExist s = liftM isJust (getIdx s)
+
 isHit :: String -> State Trie Bool
-isHit s = liftM isJust (getIdx s)
+isHit s =
+  do
+    midx <- (getIdx s)
+    Trie m len <- get
+    return $ f midx m
+  where
+    f Nothing _ = False
+    f (Just idx) m = hit
+      where
+        TrieNode hit _ _ = m M.! idx
 
 nullTrie = Trie (M.singleton 0 (TrieNode False Nothing M.empty)) 1
 
