@@ -119,19 +119,45 @@ runAC c idx =
         TrieNode _ _ _ m' <- liftM fromJust $ getNode fail
         return $ fromMaybe fail $ M.lookup c m'
 
+getString :: Int -> State Trie (String)
+getString idx =
+  do
+    TrieNode _ par _ _ <- liftM fromJust $ getNode idx
+    if isNothing par
+      then return []
+      else do
+        s <- getString (pari par)
+        return $ s++[parc par]
+  where
+    parc (Just (x,_)) = x
+    pari (Just (_,x)) = x
+
+isHitIdx :: Int -> State Trie (Bool)
+isHitIdx idx =
+  do
+    (TrieNode h _ _ _) <- liftM fromJust $ getNode idx
+    return h
+
+--little helper
+scanrM m i [] = return [i]
+scanrM m i (x:xs) =
+  do
+    j <- m x i
+    js <- scanrM m j xs
+    return (i:js)
+
 nullTrie = Trie (M.singleton 0 (TrieNode False Nothing (-1) M.empty)) 1
 
+runtest = runState test nullTrie
 test =
   do
-    put nullTrie
-    addStrings ["abc","ab","ba","bcc"]
+    addStrings ["a","ab","bab","bc","bca","c","caa"]
     (Trie _ len) <- get
     forM_ [0..(len-1)] calFail
-    a0 <- runAC 'a' 0
-    a1 <- runAC 'b' a0
-    a2 <- runAC 'c' a1
-    a3 <- runAC 'c' a2
-    return a3
+    r <- scanrM runAC 0 "abccab"
+    s <- mapM getString r
+    h <- mapM isHitIdx r
+    return (r,s,h)
 {-
 test2 = forM ["a","ab","abc","b","ba","bc","bcc","z"] isHit
 
