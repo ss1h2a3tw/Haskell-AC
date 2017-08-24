@@ -5,7 +5,6 @@ import qualified Data.Map as M
 data TrieNode = TrieNode Bool (Maybe Int) (M.Map Char Int) deriving (Show,Eq)
 data Trie = Trie (M.Map Int TrieNode) Int deriving (Show,Eq)
 
--- addchild :: Int -> Char ->
 addChild :: Int -> Char -> Bool -> State Trie Int
 addChild idx c hit =
   do
@@ -38,6 +37,11 @@ getNode idx = gets f
   where
     f (Trie m _) = M.lookup idx m
 
+adjustNode :: Int -> (TrieNode -> TrieNode) -> State Trie ()
+adjustNode idx g = modify f
+  where
+    f (Trie m x) = Trie (M.adjust g idx m) x
+
 isExist :: String -> State Trie Bool
 isExist s = liftM isJust (getIdx s)
 
@@ -53,11 +57,43 @@ isHit s =
       where
         TrieNode hit _ _ = m M.! idx
 
+-- return the added index
+
+addString :: String -> State Trie Int
+addString s = realAddString s 0
+
+realAddString :: String -> Int -> State Trie Int
+realAddString [] idx =
+  do
+    adjustNode idx (markHit)
+    return idx
+  where
+    markHit (TrieNode _ par m) = (TrieNode True par m)
+
+realAddString (c:cs) idx =
+  do
+    (TrieNode _ _ m) <- liftM fromJust $ getNode idx
+    f m
+  where
+    f m
+      | isNothing $ M.lookup c m =
+        do
+          idx' <- addChild idx c False
+          realAddString cs idx'
+      | otherwise =
+        do
+          realAddString cs $ fromJust $ M.lookup c m
+
+addStrings :: [String] -> State Trie ()
+addStrings ss = forM_ ss addString
+
 nullTrie = Trie (M.singleton 0 (TrieNode False Nothing M.empty)) 1
 
-test :: State Trie (Bool)
 test =
   do
     put nullTrie
-    addChild 0 'a' True
-    isHit "b"
+    addStrings ["abc","ab","ba","bcc"]
+    return ()
+test2 = forM ["a","ab","abc","b","ba","bc","bcc","z"] isHit
+
+test3 = test >> test2
