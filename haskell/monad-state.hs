@@ -2,7 +2,7 @@ import Control.Monad.State.Lazy
 import Data.Maybe
 import qualified Data.Map as M
 
-data TrieNode = TrieNode Bool (Maybe Int) (M.Map Char Int) deriving (Show,Eq)
+data TrieNode = TrieNode Bool (Maybe Int) Int (M.Map Char Int) deriving (Show,Eq)
 data Trie = Trie (M.Map Int TrieNode) Int deriving (Show,Eq)
 
 addChild :: Int -> Char -> Bool -> State Trie Int
@@ -14,10 +14,10 @@ addChild idx c hit =
   where
   getlen (Trie _ l) = l
   f (Trie m len) = Trie (g m len) (len+1)
-  g m len= M.insert len (TrieNode hit (Just idx) (M.empty)) m'
+  g m len = M.insert len (TrieNode hit (Just idx) (-1) (M.empty)) m'
     where
     m' = M.adjust k idx m
-    k (TrieNode h p cm) = TrieNode h p $
+    k (TrieNode h p f cm) = TrieNode h p f $
       M.insert c len cm
 
 getIdx :: String -> State Trie (Maybe Int)
@@ -30,7 +30,7 @@ getIdx s = gets f
       | isNothing $ M.lookup c cm = Nothing
       | otherwise = run m (cm M.! c) cs
         where
-          TrieNode _ _ cm = m M.! idx
+          TrieNode _ _ _ cm = m M.! idx
 
 getNode :: Int -> State Trie (Maybe TrieNode)
 getNode idx = gets f
@@ -55,7 +55,7 @@ isHit s =
     f Nothing _ = False
     f (Just idx) m = hit
       where
-        TrieNode hit _ _ = m M.! idx
+        TrieNode hit _ _ _ = m M.! idx
 
 -- return the added index
 
@@ -68,11 +68,11 @@ realAddString [] idx =
     adjustNode idx (markHit)
     return idx
   where
-    markHit (TrieNode _ par m) = (TrieNode True par m)
+    markHit (TrieNode _ par fail m) = (TrieNode True par fail m)
 
 realAddString (c:cs) idx =
   do
-    (TrieNode _ _ m) <- liftM fromJust $ getNode idx
+    (TrieNode _ _ _ m) <- liftM fromJust $ getNode idx
     f m
   where
     f m
@@ -87,7 +87,7 @@ realAddString (c:cs) idx =
 addStrings :: [String] -> State Trie ()
 addStrings ss = forM_ ss addString
 
-nullTrie = Trie (M.singleton 0 (TrieNode False Nothing M.empty)) 1
+nullTrie = Trie (M.singleton 0 (TrieNode False Nothing 0 M.empty)) 1
 
 test =
   do
