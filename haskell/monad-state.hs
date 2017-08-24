@@ -8,24 +8,18 @@ data TrieNode = TrieNode Bool (Maybe (Char,Int)) Int (M.Map Char Int) deriving (
 data Trie = Trie (M.Map Int TrieNode) Int deriving (Show,Eq)
 
 addChild :: Int -> Char -> Bool -> State Trie Int
-addChild idx c hit =
-  do
-    t <- get
-    put $ f t
-    return (getlen (f t) -1)
+addChild idx c hit = (modify f) >> (gets $ \(Trie _ len) -> len-1)
   where
-  getlen (Trie _ l) = l
-  f (Trie m len) = Trie (g m len) (len+1)
-  g m len = M.insert len (TrieNode hit (Just (c,idx)) (-1) (M.empty)) m'
-    where
-    m' = M.adjust k idx m
-    k (TrieNode h p f cm) = TrieNode h p f $
-      M.insert c len cm
+    f (Trie m len) = Trie (g m len) (len+1)
+    g m len = M.insert len (TrieNode hit (Just (c,idx)) (-1) (M.empty)) m'
+      where
+      m' = M.adjust k idx m
+      k (TrieNode h p f cm) = TrieNode h p f $
+        M.insert c len cm
 
 getIdx :: String -> State Trie (Maybe Int)
-getIdx s = gets f
+getIdx s = gets $ \(Trie m _) -> run m 0 s
   where
-    f (Trie m _) = run m 0 s
     run m idx [] = Just idx
     run m idx (c:cs)
       | isNothing $ M.lookup idx m = Nothing
@@ -35,9 +29,7 @@ getIdx s = gets f
           TrieNode _ _ _ cm = m M.! idx
 
 getNode :: Int -> State Trie (Maybe TrieNode)
-getNode idx = gets f
-  where
-    f (Trie m _) = M.lookup idx m
+getNode idx = gets $ \(Trie m _) -> M.lookup idx m
 
 adjustNode :: Int -> (TrieNode -> TrieNode) -> State Trie ()
 adjustNode idx g = modify f
@@ -91,11 +83,7 @@ addStrings ss = forM_ ss addString
 
 --Expect the nodes which idx smaller then self is calculated
 calFail :: Int -> State Trie ()
-calFail 0 =
-  do
-    adjustNode 0 f
-  where
-    f (TrieNode hit par _ m) = TrieNode hit par 0 m
+calFail 0 = adjustNode 0 $ \(TrieNode hit par _ m) -> TrieNode hit par 0 m
 calFail idx = getNode idx >>= \case
   Just (TrieNode _ (Just (_, 0)) _ _) ->
     adjustNode idx $ setFail 0
@@ -129,9 +117,7 @@ runAC c idx =
       else do
         fail <- runFail idx c
         TrieNode _ _ _ m' <- liftM fromJust $ getNode fail
-        if isJust (M.lookup c m')
-          then return $ fromJust $ M.lookup c m'
-          else return fail
+        return $ fromMaybe fail $ M.lookup c m'
 
 nullTrie = Trie (M.singleton 0 (TrieNode False Nothing (-1) M.empty)) 1
 
