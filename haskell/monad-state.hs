@@ -1,3 +1,5 @@
+{-# LANGUAGE LambdaCase #-}
+
 import Control.Monad.State.Lazy
 import Data.Maybe
 import qualified Data.Map as M
@@ -94,23 +96,18 @@ calFail 0 =
     adjustNode 0 f
   where
     f (TrieNode hit par _ m) = TrieNode hit par 0 m
-calFail idx =
-  do
-    tn <- liftM fromJust $ getNode idx
-    if (par tn) == 0
-      then adjustNode idx $ setfail 0
-      else do
-        pn <- liftM fromJust $ getNode $ par tn
-        fail' <- runFail (fail pn) (parc tn)
-        TrieNode _ _ _ m <- liftM fromJust $ getNode fail'
-        if isNothing (M.lookup (parc tn) m)
-          then adjustNode idx $ setfail fail'
-          else adjustNode idx $ setfail $ fromJust $ M.lookup (parc tn) m
+calFail idx = getNode idx >>= \case
+  Just (TrieNode _ (Just (_, 0)) _ _) ->
+    adjustNode idx $ setFail 0
+  Just tn@(TrieNode _ (Just (c, x)) _ _) ->
+    getNode x >>= \case
+      Just pn@(TrieNode _ _ f _) -> do
+        fail' <- runFail f c
+        getNode fail' >>= \case
+          Just (TrieNode _ _ _ m) ->
+            adjustNode idx . setFail $ fromMaybe fail' (M.lookup c m)
   where
-    fail (TrieNode _ _ f _) = f
-    par (TrieNode _ (Just (_,x)) _ _ ) = x
-    parc (TrieNode _ (Just (c,_)) _ _) = c
-    setfail i (TrieNode hit par _ m) = TrieNode hit par i m
+    setFail i (TrieNode hit par _ m) = TrieNode hit par i m
 
 --try to get the node that have child with char
 runFail :: Int -> Char -> State Trie (Int)
