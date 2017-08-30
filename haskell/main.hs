@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
 
 import Data.Char
@@ -23,7 +22,7 @@ mergeTrie Nothing x = x
 mergeTrie x Nothing = x
 mergeTrie (Just (TNode isA as)) (Just (TNode isB bs)) =
   Just . TNode (isA || isB) . A.array (minBound::Char,maxBound::Char)
-  $ [ (x,(mergeTrie (as A.! x) (bs A.! x))) | x <- [minBound::Char .. maxBound::Char] ]
+  $ [ (x,mergeTrie (as A.! x) (bs A.! x)) | x <- [minBound::Char .. maxBound::Char] ]
 
 constructTrie :: [String] -> Trie
 constructTrie [] = Just . TNode False . A.array (minBound::Char,maxBound::Char) $ [ (x,Nothing) | x <- [minBound::Char .. maxBound::Char] ]
@@ -35,18 +34,14 @@ getnodeTrie [] t = Just t
 getnodeTrie (c:cs) (Just (TNode _ ts)) = getnodeTrie cs $ ts A.! c
 
 inTrie :: String -> Trie -> Bool
-inTrie cs t = isHit
-  where
-  isHit
-    | isNothing (getnodeTrie cs t) = False
-    | otherwise =  (\(Just (TNode x _))->x) $ fromJust $ getnodeTrie cs t
+inTrie cs t = maybe False (\(Just (TNode x _))->x) (getNodeTrie cs t)
 
 jumpTrie :: String -> Char -> Trie -> String
 jumpTrie [] c (Just (TNode _ ts))
-  | ts A.! c == Nothing = []
+  | isNothing (ts A.! c) = []
   | otherwise = [c]
 jumpTrie cs c t
-  | ts A.! c /= Nothing = cs++[c]
+  | isJust (ts A.! c) = cs++[c]
   | otherwise = jumpTrie (failTrie cs t) c t
     where
     (Just (TNode _ ts)) = fromJust $ getnodeTrie cs t
@@ -81,9 +76,9 @@ realbuildAC :: String -> Trie -> AC
 realbuildAC cs root = AC (null cs) cs (realbuildAC (failTrie cs root) root) (realbuildAC (hitfailTrie cs root) root) isHit buildsub
   where
   (Just (TNode isHit ts)) = fromJust $ getnodeTrie cs root
-  buildsub = A.array (minBound::Char,maxBound::Char) $ [ (x,sel x) | x <- [minBound::Char .. maxBound::Char] ]
+  buildsub = A.array (minBound::Char,maxBound::Char) [ (x,sel x) | x <- [minBound::Char .. maxBound::Char] ]
   sel x
-    | ts A.! x == Nothing = ANull
+    | isNothing (ts A.! x) = ANull
     | otherwise = realbuildAC (cs++[x]) root
 
 buildAC :: [String] -> AC

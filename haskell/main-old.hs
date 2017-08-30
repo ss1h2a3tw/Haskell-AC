@@ -5,7 +5,7 @@ data Trie = Trie Bool [Trie] | TNull deriving (Show,Eq)
 singleTrie [] = Trie True [TNull | x <- [0..127]]
 singleTrie (c:cs) = Trie False [ sel x | x<-[0..127] ] where
     sel x
-        | x == (ord c) = singleTrie cs
+        | x == ord c = singleTrie cs
         | otherwise = TNull
 
 mergeTrie TNull x = x
@@ -17,28 +17,25 @@ constructTrie (x:xs) = mergeTrie (constructTrie xs) (singleTrie x)
 
 getnodeTrie _ TNull = Nothing
 getnodeTrie [] t = Just t
-getnodeTrie (c:cs) (Trie _ ts) = getnodeTrie cs $ ts!!(ord c)
+getnodeTrie (c:cs) (Trie _ ts) = getnodeTrie cs $ ts !! ord c
 
-inTrie cs t = isHit where
-    isHit
-        | Nothing == getnodeTrie cs t = False
-        | otherwise =  (\(Trie x _)->x) $ fromJust $ getnodeTrie cs t
+inTrie cs t = maybe False (\(Trie x _)->x) (getnodeTrie cs t)
 
 jumpTrie [] c (Trie _ ts)
-    | ts!!(ord c) == TNull = []
+    | ts !! ord c == TNull = []
     | otherwise = [c]
 jumpTrie cs c t
-    | ts!!(ord c) /= TNull = cs++[c]
+    | ts !! ord c /= TNull = cs++[c]
     | otherwise = jumpTrie (failTrie cs t) c t
     where (Trie _ ts) = fromJust $ getnodeTrie cs t
 
 failTrie [] _ = []
-failTrie (x:[]) _ = []
+failTrie [x] _ = []
 failTrie xs t = jumpTrie pre (last xs) t where
     pre = failTrie (init xs) t
 
 hitfailTrie [] _ = []
-hitfailTrie (x:[]) _ = []
+hitfailTrie [x] _ = []
 hitfailTrie xs t
     | isHit = res
     | otherwise = failTrie res t where
@@ -56,7 +53,7 @@ data AC = AC {
 } | ANull deriving (Show,Eq)
 
 
-realbuildAC cs root =  AC (cs==[]) cs (realbuildAC (failTrie cs root) root) (realbuildAC (hitfailTrie cs root) root) isHit buildsub where
+realbuildAC cs root =  AC (null cs) cs (realbuildAC (failTrie cs root) root) (realbuildAC (hitfailTrie cs root) root) isHit buildsub where
     (Trie isHit ts) = fromJust $ getnodeTrie cs root
     buildsub = [sel x|x<-[0..127]]
     sel x
@@ -66,6 +63,6 @@ realbuildAC cs root =  AC (cs==[]) cs (realbuildAC (failTrie cs root) root) (rea
 buildAC ss = realbuildAC [] $ constructTrie ss
 
 runAC a c
-    | (sub a)!!(ord c) == ANull = if (isroot a) then a else (runAC (failAC a) c)
-    | otherwise = (sub a)!!(ord c)
+    | sub a !! ord c == ANull = if isroot a then a else runAC (failAC a) c
+    | otherwise = sub a !! ord c
 

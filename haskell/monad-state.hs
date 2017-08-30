@@ -3,15 +3,16 @@
 import Control.Monad.State.Lazy
 import Data.Maybe
 import qualified Data.Map as M
+import Control.Applicative
 
 data TrieNode = TrieNode Bool (Maybe (Char,Int)) Int (M.Map Char Int) deriving (Show,Eq)
 data Trie = Trie (M.Map Int TrieNode) Int deriving (Show,Eq)
 
 addChild :: Int -> Char -> Bool -> State Trie Int
-addChild idx c hit = (modify f) >> (gets $ \(Trie _ len) -> len-1)
+addChild idx c hit = modify f >> gets (\(Trie _ len) -> len-1)
   where
     f (Trie m len) = Trie (g m len) (len+1)
-    g m len = M.insert len (TrieNode hit (Just (c,idx)) (-1) (M.empty)) m'
+    g m len = M.insert len (TrieNode hit (Just (c,idx)) (-1) M.empty) m'
       where
       m' = M.adjust k idx m
       k (TrieNode h p f cm) = TrieNode h p f $
@@ -37,12 +38,12 @@ adjustNode idx g = modify f
     f (Trie m x) = Trie (M.adjust g idx m) x
 
 isExist :: String -> State Trie Bool
-isExist s = liftM isJust (getIdx s)
+isExist s = fmap isJust (getIdx s)
 
 isHit :: String -> State Trie Bool
 isHit s =
   do
-    midx <- (getIdx s)
+    midx <- getIdx s
     Trie m len <- get
     return $ f midx m
   where
@@ -59,14 +60,14 @@ addString s = realAddString s 0
 realAddString :: String -> Int -> State Trie Int
 realAddString [] idx =
   do
-    adjustNode idx (markHit)
+    adjustNode idx markHit
     return idx
   where
-    markHit (TrieNode _ par fail m) = (TrieNode True par fail m)
+    markHit (TrieNode _ par fail m) = TrieNode True par fail m
 
 realAddString (c:cs) idx =
   do
-    (TrieNode _ _ _ m) <- liftM fromJust $ getNode idx
+    (TrieNode _ _ _ m) <- fromJust <$> getNode idx
     f m
   where
     f m
@@ -74,9 +75,7 @@ realAddString (c:cs) idx =
         do
           idx' <- addChild idx c False
           realAddString cs idx'
-      | otherwise =
-        do
-          realAddString cs $ fromJust $ M.lookup c m
+      | otherwise = realAddString cs $ fromJust $ M.lookup c m
 
 addStrings :: [String] -> State Trie ()
 addStrings ss = forM_ ss addString
@@ -98,31 +97,31 @@ calFail idx = getNode idx >>= \case
     setFail i (TrieNode hit par _ m) = TrieNode hit par i m
 
 --try to get the node that have child with char
-runFail :: Int -> Char -> State Trie (Int)
+runFail :: Int -> Char -> State Trie Int
 runFail 0 c = return 0
 runFail idx c =
   do
-    TrieNode _ _ fail m <- liftM fromJust $ getNode idx
+    TrieNode _ _ fail m <- fromJust <$> getNode idx
     if isJust (M.lookup c m)
       then return idx
       else runFail fail c
 
 --The actual running states in AC
-runAC :: Char -> Int -> State Trie (Int)
+runAC :: Char -> Int -> State Trie Int
 runAC c idx =
   do
-    TrieNode _ _ _ m <- liftM fromJust $ getNode idx
+    TrieNode _ _ _ m <- fromJust <$> getNode idx
     if isJust (M.lookup c m)
       then return $ fromJust $ M.lookup c m
       else do
         fail <- runFail idx c
-        TrieNode _ _ _ m' <- liftM fromJust $ getNode fail
+        TrieNode _ _ _ m' <- fromJust <$> getNode fail
         return $ fromMaybe fail $ M.lookup c m'
 
-getString :: Int -> State Trie (String)
+getString :: Int -> State Trie String
 getString idx =
   do
-    TrieNode _ par _ _ <- liftM fromJust $ getNode idx
+    TrieNode _ par _ _ <- fromJust <$> getNode idx
     if isNothing par
       then return []
       else do
@@ -132,10 +131,10 @@ getString idx =
     parc (Just (x,_)) = x
     pari (Just (_,x)) = x
 
-isHitIdx :: Int -> State Trie (Bool)
+isHitIdx :: Int -> State Trie Bool
 isHitIdx idx =
   do
-    (TrieNode h _ _ _) <- liftM fromJust $ getNode idx
+    (TrieNode h _ _ _) <- fromJust <$> getNode idx
     return h
 
 --little helper
