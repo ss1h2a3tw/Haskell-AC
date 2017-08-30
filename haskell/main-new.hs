@@ -58,11 +58,7 @@ getNodeTrie (c:cs) (Trie _ _ m)
   | otherwise = getNodeTrie cs $ m ! c
 
 inTrie :: String -> Trie -> Bool
-inTrie cs t = isHit
-  where
-  isHit
-    | isNothing (getNodeTrie cs t) = False
-    | otherwise =  (\(Trie x _ _)->x) $ fromJust $ getNodeTrie cs t
+inTrie cs t = maybe False (\(Trie x _ _)->x) (getNodeTrie cs t)
 
 jumpTrie :: Trie -> Char -> Trie
 jumpTrie (Trie hit Nothing m) c

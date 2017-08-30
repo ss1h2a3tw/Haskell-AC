@@ -34,11 +34,7 @@ getnodeTrie [] t = Just t
 getnodeTrie (c:cs) (Just (TNode _ ts)) = getnodeTrie cs $ ts A.! c
 
 inTrie :: String -> Trie -> Bool
-inTrie cs t = isHit
-  where
-  isHit
-    | isNothing (getnodeTrie cs t) = False
-    | otherwise =  (\(Just (TNode x _))->x) $ fromJust $ getnodeTrie cs t
+inTrie cs t = maybe False (\(Just (TNode x _))->x) (getNodeTrie cs t)
 
 jumpTrie :: String -> Char -> Trie -> String
 jumpTrie [] c (Just (TNode _ ts))

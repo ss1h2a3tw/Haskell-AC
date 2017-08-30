@@ -19,10 +19,7 @@ getnodeTrie _ TNull = Nothing
 getnodeTrie [] t = Just t
 getnodeTrie (c:cs) (Trie _ ts) = getnodeTrie cs $ ts !! ord c
 
-inTrie cs t = isHit where
-    isHit
-        | isNothing (getnodeTrie cs t) = False
-        | otherwise =  (\(Trie x _)->x) $ fromJust $ getnodeTrie cs t
+inTrie cs t = maybe False (\(Trie x _)->x) (getnodeTrie cs t)
 
 jumpTrie [] c (Trie _ ts)
     | ts !! ord c == TNull = []

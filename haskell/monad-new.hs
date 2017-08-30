@@ -20,9 +20,7 @@ minNotInMapIdx m = S.findMin $ S.map succ ks S.\\ ks
 
 strToIdx [] _ _ = 0
 --Assumption: all the chars except end in trie
-strToIdx [c] idx m
-  | isNothing (M.lookup c current) = minNotInMapIdx m
-  | otherwise = fromJust $ M.lookup c current
+strToIdx [c] idx m = fromMaybe (minNotInMapIdx m) (M.lookup c current)
   where TrieNode _ _ current = m M.! idx
 strToIdx (c:cs) idx m = strToIdx cs (fromJust $ M.lookup c current) m
   where TrieNode _ _ current = m M.! idx
