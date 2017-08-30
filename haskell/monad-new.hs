@@ -11,8 +11,8 @@ instance Functor Trie where
 root = TrieNode False Nothing M.empty
 
 instance Applicative Trie where
-  pure a = (Trie (M.singleton 0 root) (Left []) a)
-  (Trie ax ay f) <*> (Trie bx by b) = (Trie bx by (f b))
+  pure = Trie (M.singleton 0 root) (Left [])
+  (Trie ax ay f) <*> (Trie bx by b) = Trie bx by (f b)
 
 minNotInMapIdx m = S.findMin $ S.map succ ks S.\\ ks
   where
@@ -21,7 +21,7 @@ minNotInMapIdx m = S.findMin $ S.map succ ks S.\\ ks
 strToIdx [] _ _ = 0
 --Assumption: all the chars except end in trie
 strToIdx [c] idx m
-  | M.lookup c current == Nothing = minNotInMapIdx m
+  | isNothing (M.lookup c current) = minNotInMapIdx m
   | otherwise = fromJust $ M.lookup c current
   where TrieNode _ _ current = m M.! idx
 strToIdx (c:cs) idx m = strToIdx cs (fromJust $ M.lookup c current) m

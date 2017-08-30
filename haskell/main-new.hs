@@ -11,30 +11,30 @@ type TParent = (Trie, Char)
 data Trie = Trie Bool (Maybe TParent) (Map Char Trie) deriving Eq
 instance Show Trie where
   show (Trie hit Nothing m) = "Root Node [" ++ showchild m ++ "]"
-    where showchild cm = Map.foldl (\pre now->(pre++" "++(show now))) "" cm
+    where showchild = Map.foldl (\pre now -> pre ++ " " ++ show now) ""
   show (Trie hit (Just (_,c)) m) = "From :" ++ [c] ++ "[" ++ showchild m ++ "]"
-    where showchild cm = Map.foldl (\pre now->(pre++" "++(show now))) "" cm
+    where showchild = Map.foldl (\pre now -> pre ++ " " ++ show now) ""
 
-realSingleTrie :: (Maybe TParent) -> String -> Trie
+realSingleTrie :: Maybe TParent -> String -> Trie
 realSingleTrie par [] = Trie True par empty
 realSingleTrie par (c:cs) = Trie False par . singleton c $
   realSingleTrie (Just (realSingleTrie par (c:cs), c)) cs
 
 singleTrie :: String -> Trie
-singleTrie s = realSingleTrie Nothing s
+singleTrie = realSingleTrie Nothing
 
 getParent :: Trie -> Maybe Trie
 getParent (Trie _ Nothing _) = Nothing
 getParent (Trie _ (Just (p,_)) _) = Just p
 
-modifyParent :: (Maybe TParent) -> Trie -> Trie
+modifyParent :: Maybe TParent -> Trie -> Trie
 modifyParent p (Trie hit _ m) = ret
   where
   ret = Trie hit p $
     mapWithKey f m
-  f k c = modifyParent (Just (ret,k)) c
+  f k = modifyParent (Just (ret,k))
 
-realMergeTrie :: (Maybe TParent) -> Trie -> Trie -> Trie
+realMergeTrie :: Maybe TParent -> Trie -> Trie -> Trie
 realMergeTrie par (Trie isA _ ma) (Trie isB _ mb) = ret
   where
   ret = Trie (isA || isB) par $ foldlWithKey f ma mb
@@ -45,7 +45,7 @@ realMergeTrie par (Trie isA _ ma) (Trie isB _ mb) = ret
     | otherwise = insert k (realMergeTrie (Just (ret, k)) (m ! k) b) m
 
 mergeTrie :: Trie -> Trie -> Trie
-mergeTrie a b = realMergeTrie Nothing a b
+mergeTrie = realMergeTrie Nothing
 
 constructTrie :: [String] -> Trie
 constructTrie [] = Trie False Nothing empty

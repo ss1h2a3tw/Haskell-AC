@@ -7,8 +7,8 @@ instance Functor Trie where
   fmap f (Trie x y a) = Trie x y (f a)
 
 instance Applicative Trie where
-  pure a = (Trie M.empty [] a)
-  (Trie ax ay f) <*> (Trie bx by b) = (Trie bx by (f b))
+  pure = Trie M.empty []
+  (Trie ax ay f) <*> (Trie bx by b) = Trie bx by (f b)
 
 instance Monad Trie where
   return = pure
@@ -21,8 +21,7 @@ instance Monad Trie where
 
 insertTrie i a = Trie M.empty [(i,a)] ()
 
-test = do
-  insertTrie 0 (TrieNode False Nothing M.empty)
+test = insertTrie 0 (TrieNode False Nothing M.empty)
 
 {-
 getID
